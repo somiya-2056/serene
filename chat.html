@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat — Serene</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+
+    /* ── Chat messages area ── */
+    #chatMessages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: var(--bg) !important;
+      min-height: 0;
+    }
+
+    /* ══════════════════════════════════════════
+       FIX: A11y toggle + bar — no overlap with
+       chat layout, wheelchair icon always visible
+    ══════════════════════════════════════════ */
+    .a11y-toggle {
+      position: fixed;
+      right: 16px;
+      /* Push below navbar — adjust if your navbar height differs */
+      top: 80px;
+      z-index: 200;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: var(--surface, #1e2330);
+      border: 1.5px solid var(--border, rgba(255,255,255,0.1));
+      color: var(--text, #e2e8f0);
+      font-size: 1.15rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+      transition: background 0.2s;
+    }
+    .a11y-toggle:hover { background: var(--bg2, #252b3b); }
+
+    /* Bar opens BELOW the toggle button, stacked vertically */
+    #a11yBar {
+      position: fixed;
+      right: 16px;
+      top: 130px;           /* toggle top(80) + toggle height(42) + gap(8) */
+      z-index: 199;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      /* Hidden by default — script adds class 'open' */
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height 0.3s ease, opacity 0.2s ease;
+      pointer-events: none;
+    }
+    #a11yBar.open {
+      max-height: 60vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      opacity: 1;
+      pointer-events: auto;
+      padding: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--accent) transparent;
+    }
+    #a11yBar::-webkit-scrollbar { width: 4px; }
+    #a11yBar::-webkit-scrollbar-track { background: transparent; }
+    #a11yBar::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+    /* All a11y buttons — consistent size */
+    .a11y-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border, rgba(255,255,255,0.1));
+      background: var(--surface, #1e2330);
+      color: var(--text, #e2e8f0);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .a11y-btn:hover        { background: var(--bg2, #252b3b); border-color: var(--accent); }
+    .a11y-btn.active       { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Ensure chat topbar actions don't get pushed by a11y bar */
+    .chat-topbar-actions   { position: relative; z-index: 1; }
+
+    /* ── Session loading state ── */
+    .chat-history-item { cursor: pointer; }
+    .chat-history-item.loading { opacity: 0.6; pointer-events: none; }
+
+    /* ── Empty state for session messages ── */
+    .session-empty {
+      text-align: center;
+      color: var(--text3);
+      font-size: 0.88rem;
+      padding: 40px 20px;
+    }
+  </style>
+</head>
+<body data-page="chat">
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">Serene</a>
+  <div class="navbar-nav">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="forum.html"     class="nav-link">Community</a>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <div class="user-avatar" id="navAvatar">?</div>
+  </div>
+</nav>
+
+<!-- Accessibility toggle — fixed, always visible, never overlaps chat -->
+<button class="a11y-toggle" id="a11yToggle" title="Accessibility options">♿</button>
+
+<!-- A11y bar — slides open below toggle -->
+<div id="a11yBar">
+  <button class="a11y-btn" id="a11yTTS"          title="Toggle read aloud">🔊</button>
+  <button class="a11y-btn" id="a11yHighContrast"  title="High contrast">◑</button>
+  <button class="a11y-btn" id="a11yFontSize"      title="Increase font size">A+</button>
+  <button class="a11y-btn" id="a11yMorse"         title="Morse code input">·−</button>
+  <!-- Camera + Sign buttons injected here by setupCameraButton() in script.js -->
+</div>
+
+<div class="chat-layout">
+
+  <!-- ── Sidebar ── -->
+  <div class="chat-sidebar">
+    <div class="sidebar-header">
+      <h3>Conversations</h3>
+      <button class="sidebar-new-btn" id="newChatBtn" title="New chat">+</button>
+    </div>
+
+    <div class="sidebar-list" id="chatHistoryList">
+      <div class="chat-history-item active">
+        <div class="chi-title">New session</div>
+        <div class="chi-preview">Start talking to Serene...</div>
+        <div class="chi-time">Now</div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar" id="sidebarAvatar">?</div>
+        <div class="user-info">
+          <div class="user-name"  id="sidebarName">Loading...</div>
+          <div class="user-plan">✓ Free Plan</div>
+        </div>
+        <button id="logoutBtn"
+          style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:0.9rem"
+          title="Sign out">⬡</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main chat area ── -->
+  <div class="chat-main">
+
+    <div class="chat-topbar">
+      <div class="chat-topbar-info">
+        <div class="ai-avatar"><div class="ai-status"></div></div>
+        <div class="ai-info">
+          <div class="ai-name">Serene AI</div>
+          <div class="ai-desc">Mental health companion</div>
+        </div>
+      </div>
+      <div class="chat-topbar-actions">
+        <button class="icon-btn" id="ttsBtn"    title="Read aloud">🔊</button>
+        <button class="icon-btn" id="clearBtn"  title="Clear chat">🗑</button>
+        <button class="icon-btn" id="exportBtn" title="Export session">📥</button>
+      </div>
+    </div>
+
+    <div class="sentiment-bar">
+      <div class="sentiment-fill" id="sentimentFill" style="width:65%"></div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <!-- Mood check-in widget -->
+      <div class="mood-check-in" id="moodCheckIn">
+        <p>How are you feeling right now?</p>
+        <div class="mood-options">
+          <button class="mood-btn" data-mood="😊 Great"      data-score="5">😊</button>
+          <button class="mood-btn" data-mood="😐 Okay"       data-score="3">😐</button>
+          <button class="mood-btn" data-mood="😔 Low"        data-score="2">😔</button>
+          <button class="mood-btn" data-mood="😰 Anxious"    data-score="2">😰</button>
+          <button class="mood-btn" data-mood="😤 Frustrated" data-score="2">😤</button>
+        </div>
+      </div>
+
+      <!-- Default welcome message -->
+      <div class="message ai">
+        <div class="msg-avatar">🌿</div>
+        <div class="msg-content">
+          <div class="msg-bubble">
+            Hi there 👋 I'm Serene, your mental health companion. This is a safe, private space — you can share anything on your mind, and I'll listen without judgment.<br><br>
+            How are you feeling today?
+          </div>
+          <div class="msg-time" id="welcomeTime"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="suggested-prompts" id="suggestedPrompts">
+      <button class="suggestion-chip">I've been feeling anxious</button>
+      <button class="suggestion-chip">Help me calm down</button>
+      <button class="suggestion-chip">I can't sleep well lately</button>
+      <button class="suggestion-chip">I need to talk</button>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrap">
+        <textarea id="chatInput" placeholder="Share what's on your mind..." rows="1"></textarea>
+        <div class="input-actions">
+          <button class="input-icon-btn" id="voiceBtn" title="Voice input">🎤</button>
+          <button class="send-btn" id="sendBtn">➤</button>
+        </div>
+      </div>
+      <div class="input-hint">Enter to send · Shift+Enter for new line · Your conversations are private</div>
+    </div>
+  </div>
+</div>
+
+<!-- SOS / Crisis — commented out as requested -->
+<!--
+<div class="modal-overlay" id="crisisModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🆘 Crisis Support</div>
+      <button class="modal-close" id="crisisModalClose">✕</button>
+    </div>
+    <p style="color:var(--text2);margin-bottom:20px;font-size:0.92rem;line-height:1.6">
+      You're not alone. If you're in immediate danger, please call emergency services.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <a href="tel:988"    class="btn btn-primary">📞 Call 988 — Suicide & Crisis Lifeline</a>
+      <a href="sms:741741" class="btn btn-secondary">💬 Text HOME to 741741</a>
+      <a href="tel:911"    class="btn btn-danger btn-sm">🚨 Emergency: 911</a>
+    </div>
+    <button class="btn btn-ghost btn-full mt-4" id="crisisModalDismiss">I'm okay, close this</button>
+  </div>
+</div>
+<button class="crisis-fab" id="crisisFab" title="Crisis support">🆘</button>
+-->
+
+<!-- Clear Chat Modal -->
+<div class="modal-overlay" id="clearChatModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Clear Conversation?</div>
+      <button class="modal-close" id="clearModalClose">✕</button>
+    </div>
+    <p style="color:var(--text2);margin-bottom:20px">
+      This will permanently delete all messages in this session.
+    </p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-danger" style="flex:1" id="confirmClearBtn">Yes, Clear All</button>
+      <button class="btn btn-ghost"  style="flex:1" id="cancelClearBtn">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════
+     FIX: loadSession — ab sirf ID set nahi hota, poore messages
+     Supabase se fetch karke chatMessages mein render hote hain
+  ══════════════════════════════════════════════════════════════ */
+  async function loadSession(sessionId) {
+    const container  = document.getElementById('chatMessages');
+    const historyItems = document.querySelectorAll('.chat-history-item');
+
+    /* Active state update karo sidebar mein */
+    historyItems.forEach(el => {
+      el.classList.toggle('active', el.dataset.sessionId === sessionId);
+    });
+
+    /* Global state set karo (script.js ke variables) */
+    _currentSessionId = sessionId;
+    currentSessionId  = sessionId;
+
+    /* Loading state dikhao */
+    container.innerHTML = `
+      <div class="session-empty">
+        <div style="font-size:1.5rem;margin-bottom:8px">⏳</div>
+        Loading conversation...
+      </div>`;
+
+    try {
+      const { data, error } = await supabaseClient
+        .from('chat_messages')
+        .select('role, content, created_at, sentiment_score')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      /* _messages array reset karo script.js ke liye */
+      _messages = [];
+      container.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        container.innerHTML = `
+          <div class="session-empty">
+            <div style="font-size:1.5rem;margin-bottom:8px">💬</div>
+            No messages in this session yet.
+          </div>`;
+        return;
+      }
+
+      /* Har message render karo */
+      data.forEach(msg => {
+        const role      = msg.role === 'ai' ? 'ai' : 'user';
+        const el        = document.createElement('div');
+        el.className    = `message ${role}`;
+        const formatted = String(msg.content)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/\n/g,'<br>');
+        const timeStr   = new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit', minute: '2-digit'
+        });
+        const avatarInner = role === 'ai'
+          ? '🌿'
+          : (typeof getInitial === 'function' ? getInitial(_currentUser) : '?');
+
+        el.innerHTML = `
+          <div class="msg-avatar">${avatarInner}</div>
+          <div class="msg-content">
+            <div class="msg-bubble">${formatted}</div>
+            <div class="msg-time">${timeStr}</div>
+          </div>`;
+        container.appendChild(el);
+        _messages.push({ role, text: msg.content });
+      });
+
+      container.scrollTop = container.scrollHeight;
+      showToast('Session loaded', 'info');
+
+    } catch (err) {
+      console.error('[Serene] loadSession error:', err);
+      container.innerHTML = `
+        <div class="session-empty">
+          <div style="font-size:1.5rem;margin-bottom:8px">⚠️</div>
+          Could not load this session. Please try again.
+        </div>`;
+      showToast('Could not load session', 'error');
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     FIX: loadChatHistory — session items mein data-session-id
+     attribute add karo taaki active state sahi track ho
+  ══════════════════════════════════════════════════════════════ */
+  const _origLoadChatHistory = typeof loadChatHistory === 'function'
+    ? loadChatHistory : null;
+
+  async function loadChatHistory() {
+    if (!_currentUser) return;
+    const sessions = await fetchChatSessions(_currentUser.id);
+    const list     = document.getElementById('chatHistoryList');
+    if (!list) return;
+
+    if (!sessions.length) {
+      list.innerHTML = `
+        <div style="color:var(--text3);font-size:0.85rem;padding:16px;text-align:center">
+          No past sessions yet
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = sessions.map((s, i) => `
+      <div class="chat-history-item ${i === 0 ? 'active' : ''}"
+           data-session-id="${s.id}"
+           onclick="loadSession('${s.id}')">
+        <div class="chi-title">${s.title || 'Session'}</div>
+        <div class="chi-preview">${s.mood_start ? `Mood: ${s.mood_start}` : 'No mood recorded'}</div>
+        <div class="chi-time">${new Date(s.created_at).toLocaleDateString()}</div>
+      </div>`).join('');
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# 🔐 Secret files — NEVER push these!
+.env
+config.js
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+env/
+.venv/
+
+# Node (agar future mein use karo)
+node_modules/
+.npm
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

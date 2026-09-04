@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress — Serene</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .progress-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+    .progress-content { padding: 32px; overflow-y: auto; }
+    .progress-header  { margin-bottom: 32px; }
+    .progress-title   { font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 6px; }
+    .progress-sub     { color: var(--text2); font-size: 0.9rem; }
+
+    .progress-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+
+    .prog-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .prog-card-title {
+      font-size: 0.88rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 16px;
+    }
+
+    /* Weekly chart */
+    .weekly-chart {
+      display: flex; align-items: flex-end; gap: 8px;
+      height: 160px; padding-bottom: 24px; position: relative;
+    }
+    .weekly-chart::after {
+      content: '';
+      position: absolute; bottom: 24px; left: 0; right: 0; height: 1px;
+      background: var(--border);
+    }
+
+    /* Donut */
+    .donut-wrap {
+      display: flex; align-items: center; gap: 24px;
+    }
+    .donut {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      background: conic-gradient(
+        var(--accent3) 0% 35%,
+        var(--accent)  35% 60%,
+        var(--accent2) 60% 75%,
+        var(--danger)  75% 100%
+      );
+      position: relative;
+    }
+    .donut::after {
+      content: '';
+      position: absolute; inset: 28px; border-radius: 50%; background: var(--surface);
+    }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+    .donut-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
+    .donut-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* Streak card */
+    .streak-display {
+      text-align: center; padding: 20px 0;
+    }
+    .streak-num {
+      font-family: var(--font-display); font-size: 4rem; font-weight: 700;
+      color: var(--accent3); line-height: 1;
+    }
+    .streak-label { color: var(--text2); font-size: 0.88rem; margin-top: 4px; }
+    .streak-mini-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 16px;
+    }
+    .streak-dot {
+      aspect-ratio: 1; border-radius: 3px; background: var(--bg3);
+    }
+    .streak-dot.filled { background: var(--accent3); }
+    .streak-dot.today  { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+    /* Insights */
+    .insights-list { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Reports table */
+    .reports-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .reports-table th {
+      text-align: left; padding: 10px 14px;
+      font-size: 0.78rem; font-weight: 600; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    .reports-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: var(--text2); }
+    .reports-table tr:last-child td { border-bottom: none; }
+    .reports-table tr:hover td { background: var(--bg2); color: var(--text); }
+
+    .badge-pill {
+      display: inline-block; padding: 2px 10px; border-radius: 50px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+    .badge-good    { background: rgba(52,211,153,0.15); color: var(--accent3); }
+    .badge-neutral { background: rgba(94,183,255,0.15); color: var(--accent); }
+    .badge-low     { background: rgba(248,113,113,0.15); color: var(--danger); }
+
+    @media (max-width: 768px) {
+      .progress-layout { grid-template-columns: 1fr; }
+      .dash-sidebar { display: none; }
+      .progress-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body data-page="progress">
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">Serene</a>
+  <div class="navbar-nav">
+    <a href="chat.html"      class="nav-link">Chat</a>
+    <a href="forum.html"     class="nav-link">Community</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <div class="user-avatar" id="navAvatar">?</div>
+  </div>
+</nav>
+
+<div class="progress-layout">
+
+  <!-- Sidebar (reuse dashboard sidebar styles) -->
+  <div class="dash-sidebar">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Main</div>
+      <a href="dashboard.html" class="dash-nav-item"><span class="dash-nav-icon">📊</span>Overview</a>
+      <a href="chat.html"      class="dash-nav-item"><span class="dash-nav-icon">💬</span>Chat</a>
+      <a href="progress.html"  class="dash-nav-item active"><span class="dash-nav-icon">📈</span>Progress</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Connect</div>
+      <a href="forum.html"     class="dash-nav-item"><span class="dash-nav-icon">🌐</span>Community</a>
+      <a href="therapist.html" class="dash-nav-item"><span class="dash-nav-icon">🩺</span>My Therapist</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <a href="index.html" class="dash-nav-item"><span class="dash-nav-icon">🏠</span>Home</a>
+      <button class="dash-nav-item" id="logoutBtn" style="width:100%;text-align:left;background:none;border:none;color:var(--text2);font-size:0.88rem;font-weight:500;">
+        <span class="dash-nav-icon">🚪</span>Sign Out
+      </button>
+    </div>
+  </div>
+
+  <div class="progress-content">
+    <div class="progress-header">
+      <div class="progress-title">Your Progress 📈</div>
+      <div class="progress-sub">Tracking your wellness journey over the past 30 days</div>
+    </div>
+
+    <div class="progress-grid">
+
+      <!-- Weekly mood trend -->
+      <div class="prog-card">
+        <div class="prog-card-title">Mood Trend · This Week</div>
+        <div class="weekly-chart" id="weeklyMoodChart"></div>
+      </div>
+
+      <!-- Mood distribution donut -->
+      <div class="prog-card">
+        <div class="prog-card-title">Mood Distribution · This Month</div>
+        <div class="donut-wrap" style="padding-top:8px">
+          <div class="donut" id="moodDonut"></div>
+          <div class="donut-legend">
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--accent3)"></div>
+              <span>Great / Good — 35%</span>
+            </div>
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--accent)"></div>
+              <span>Okay — 25%</span>
+            </div>
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--accent2)"></div>
+              <span>Low — 15%</span>
+            </div>
+            <div class="donut-item">
+              <div class="donut-dot" style="background:var(--danger)"></div>
+              <span>Bad — 25%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Streak tracker -->
+      <div class="prog-card">
+        <div class="prog-card-title">Daily Streak</div>
+        <div class="streak-display">
+          <div class="streak-num">—</div>
+          <div class="streak-label">Loading...</div>
+        </div>
+        <div class="streak-mini-grid" id="streakGrid"></div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="prog-card">
+        <div class="prog-card-title">Monthly Summary</div>
+        <div style="display:flex;flex-direction:column;gap:14px;padding-top:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.88rem;color:var(--text2)">Total Sessions</span>
+            <span style="font-weight:700;font-size:1.1rem">14</span>
+          </div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.88rem;color:var(--text2)">Avg Mood Score</span>
+            <span style="font-weight:700;font-size:1.1rem;color:var(--accent3)">3.8 / 5</span>
+          </div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.88rem;color:var(--text2)">Mood logged days</span>
+            <span style="font-weight:700;font-size:1.1rem">22 / 30</span>
+          </div>
+          <div style="height:1px;background:var(--border)"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:0.88rem;color:var(--text2)">Week over week</span>
+            <span style="font-weight:700;font-size:1.1rem;color:var(--accent3)">↑ 12%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="prog-card" style="margin-bottom:24px">
+      <div class="prog-card-title">✨ AI Insights — Patterns We've Noticed</div>
+      <div class="insights-list" id="progressInsights" style="margin-top:4px"></div>
+    </div>
+
+    <div class="prog-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="prog-card-title" style="margin-bottom:0">Session History</div>
+        <a href="chat.html" class="btn btn-ghost btn-sm">New Chat +</a>
+      </div>
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Messages</th>
+            <th>Mood Score</th>
+            <th>Mood Label</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Today</td><td>24 min</td><td>18</td>
+            <td><span class="badge-pill badge-neutral">3.5 / 5</span></td>
+            <td>Okay → Good</td>
+          </tr>
+          <tr>
+            <td>Yesterday</td><td>8 min</td><td>6</td>
+            <td><span class="badge-pill badge-good">4.2 / 5</span></td>
+            <td>Good</td>
+          </tr>
+          <tr>
+            <td>Mon, Mar 18</td><td>35 min</td><td>28</td>
+            <td><span class="badge-pill badge-low">2.1 / 5</span></td>
+            <td>Anxious → Okay</td>
+          </tr>
+          <tr>
+            <td>Sat, Mar 16</td><td>12 min</td><td>10</td>
+            <td><span class="badge-pill badge-good">4.8 / 5</span></td>
+            <td>Great</td>
+          </tr>
+          <tr>
+            <td>Fri, Mar 15</td><td>20 min</td><td>15</td>
+            <td><span class="badge-pill badge-neutral">3.0 / 5</span></td>
+            <td>Okay</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+
+    async function buildStreakGrid() {
+      const grid = document.getElementById('streakGrid');
+      if (!grid) return;
+
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) return;
+
+      const moods = await fetchMoodHistory(session.user.id, 30);
+
+     
+      const streak = calcStreak(moods);
+
+      const streakNum   = document.querySelector('.streak-num');
+      const streakLabel = document.querySelector('.streak-label');
+
+      if (streakNum) streakNum.textContent = streak;
+      if (streakLabel) streakLabel.textContent = 
+          streak >= 7 ? `days in a row 🔥 — Personal best!`
+        : streak >= 3 ? `days in a row 🔥 — Keep going!`
+        : streak === 0 ? `No streak yet — start today! 💪`
+        : `day${streak > 1 ? 's' : ''} in a row — You got this!`;
+
+      
+      const loggedDates = new Set(moods.map(m => m.created_at?.slice(0, 10)));
+      const today = new Date().toISOString().slice(0, 10);
+
+      grid.innerHTML = '';
+      for (let i = 20; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+
+        const dot = document.createElement('div');
+        dot.className = 'streak-dot';
+        dot.title = dateStr;
+
+        if (dateStr === today) {
+          dot.classList.add(loggedDates.has(dateStr) ? 'filled' : 'today');
+        } else if (loggedDates.has(dateStr)) {
+          dot.classList.add('filled');
+        }
+        grid.appendChild(dot);
+      }
+    }
+
+    await buildStreakGrid();
+  });
+</script>
+</body>
+</html>

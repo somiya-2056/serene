@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Therapist — Serene</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .therapist-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 65px);
+    }
+    .therapist-content { padding: 32px; overflow-y: auto; }
+
+    .therapist-hero {
+      background: linear-gradient(135deg, rgba(94,183,255,0.08), rgba(167,139,250,0.08));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .therapist-hero-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; flex-shrink: 0;
+    }
+    .therapist-hero-text h2 {
+      font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 6px;
+    }
+    .therapist-hero-text p { color: var(--text2); font-size: 0.9rem; line-height: 1.6; max-width: 520px; }
+
+    .therapist-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .t-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px;
+    }
+    .t-card-title {
+      font-size: 0.88rem; font-weight: 600; color: var(--text2);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 20px;
+    }
+
+    /* Connected therapist card */
+    .therapist-connected-card {
+      display: flex; align-items: center; gap: 16px;
+      padding: 16px; border-radius: var(--radius-sm);
+      background: var(--bg2); border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .therapist-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent2), var(--accent3));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; flex-shrink: 0;
+    }
+    .online-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--accent3);
+      margin-right: 6px; vertical-align: middle;
+    }
+
+    /* Sharing toggle */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 0.88rem; }
+    .toggle-desc  { font-size: 0.78rem; color: var(--text3); margin-top: 2px; }
+
+    .switch {
+      position: relative; width: 44px; height: 24px; flex-shrink: 0;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; border-radius: 12px;
+      background: var(--bg3); cursor: pointer; transition: .3s;
+    }
+    .slider::before {
+      content: ''; position: absolute;
+      width: 18px; height: 18px; left: 3px; bottom: 3px;
+      border-radius: 50%; background: #fff; transition: .3s;
+    }
+    input:checked + .slider { background: var(--accent3); }
+    input:checked + .slider::before { transform: translateX(20px); }
+
+    /* Report cards */
+    .report-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .report-item:last-child { border-bottom: none; }
+    .report-icon {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      background: var(--bg2); display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; flex-shrink: 0;
+    }
+    .report-info { flex: 1; }
+    .report-name { font-size: 0.88rem; font-weight: 500; }
+    .report-meta { font-size: 0.76rem; color: var(--text3); margin-top: 2px; }
+    .report-action {
+      background: none; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 6px 12px;
+      font-size: 0.78rem; color: var(--text2); cursor: pointer;
+      transition: all var(--transition);
+    }
+    .report-action:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Connect form section */
+    #connectSection { }
+    #therapistConnected { display: none; }
+
+    @media (max-width: 768px) {
+      .therapist-layout { grid-template-columns: 1fr; }
+      .dash-sidebar { display: none; }
+      .therapist-grid { grid-template-columns: 1fr; }
+      .therapist-hero { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body data-page="therapist">
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">Serene</a>
+  <div class="navbar-nav">
+    <a href="chat.html"      class="nav-link">Chat</a>
+    <a href="forum.html"     class="nav-link">Community</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <div class="user-avatar" id="navAvatar">?</div>
+  </div>
+</nav>
+
+<div class="therapist-layout">
+
+  <!-- Sidebar -->
+  <div class="dash-sidebar">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Main</div>
+      <a href="dashboard.html" class="dash-nav-item"><span class="dash-nav-icon">📊</span>Overview</a>
+      <a href="chat.html"      class="dash-nav-item"><span class="dash-nav-icon">💬</span>Chat</a>
+      <a href="progress.html"  class="dash-nav-item"><span class="dash-nav-icon">📈</span>Progress</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Connect</div>
+      <a href="forum.html"     class="dash-nav-item"><span class="dash-nav-icon">🌐</span>Community</a>
+      <a href="therapist.html" class="dash-nav-item active"><span class="dash-nav-icon">🩺</span>My Therapist</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <a href="index.html" class="dash-nav-item"><span class="dash-nav-icon">🏠</span>Home</a>
+      <button class="dash-nav-item" id="logoutBtn" style="width:100%;text-align:left;background:none;border:none;color:var(--text2);font-size:0.88rem;font-weight:500;">
+        <span class="dash-nav-icon">🚪</span>Sign Out
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="therapist-content">
+
+    <!-- Hero -->
+    <div class="therapist-hero">
+      <div class="therapist-hero-icon">🩺</div>
+      <div class="therapist-hero-text">
+        <h2>Connect with your therapist</h2>
+        <p>Serene can securely share session summaries and mood reports with your therapist. They'll get an alert if our AI detects elevated distress — with your permission, always. Your privacy stays in your hands.</p>
+      </div>
+    </div>
+
+    <div class="therapist-grid">
+
+      <!-- Connect / Connected section -->
+      <div class="t-card">
+        <div class="t-card-title">Therapist Connection</div>
+
+        <!-- Connect form -->
+        <div id="connectSection">
+          <p style="font-size:0.88rem;color:var(--text2);margin-bottom:20px;line-height:1.6">
+            Ask your therapist for their Serene Connect code. Once linked, they can view your mood summary and session reports — nothing else.
+          </p>
+          <form id="connectTherapistForm">
+            <div class="form-group">
+              <label class="form-label">Therapist Connect Code</label>
+              <input type="text" class="form-input" id="therapistCode" placeholder="e.g. DR-PRIYA-2024" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">Connect Therapist 🔗</button>
+          </form>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <p style="font-size:0.82rem;color:var(--text3)">Don't have a therapist yet?</p>
+            <a href="#" style="font-size:0.82rem;color:var(--accent)">Find a therapist near you →</a>
+          </div>
+        </div>
+
+        <!-- Connected state (shown after connecting) -->
+        <div id="therapistConnected">
+          <div class="therapist-connected-card">
+            <div class="therapist-avatar">👩‍⚕️</div>
+            <div style="flex:1">
+              <div style="font-size:0.92rem;font-weight:600">Dr. Priya Sharma</div>
+              <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">Cognitive Behavioural Therapist</div>
+              <div style="font-size:0.78rem;margin-top:4px">
+                <span class="online-dot"></span>
+                <span style="color:var(--accent3)">Active on Serene</span>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:0.72rem;color:var(--text3)">Connected</div>
+              <div style="font-size:0.72rem;color:var(--accent3)">✓ Verified</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-ghost btn-sm" style="flex:1" onclick="sendTherapistMessage()">💬 Send a note</button>
+            <button class="btn btn-danger btn-sm" style="flex:1" onclick="confirmDisconnect()">Disconnect</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sharing controls -->
+      <div class="t-card">
+        <div class="t-card-title">Sharing Controls</div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Session Summaries</div>
+            <div class="toggle-desc">Share weekly chat summaries with therapist</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="shareToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Mood Reports</div>
+            <div class="toggle-desc">Share daily mood log data</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="shareMoodToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Risk Alerts</div>
+            <div class="toggle-desc">Alert therapist when distress is detected</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="shareAlertToggle" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Raw Chat Logs</div>
+            <div class="toggle-desc">Share full conversation history (off by default)</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="shareRawToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div style="margin-top:16px;padding:12px;background:rgba(94,183,255,0.06);border-radius:var(--radius-sm);border:1px solid rgba(94,183,255,0.15)">
+          <div style="font-size:0.82rem;color:var(--accent);font-weight:600;margin-bottom:4px">🔒 Privacy first</div>
+          <div style="font-size:0.78rem;color:var(--text3);line-height:1.6">Your therapist only sees what you choose. You can revoke access at any time. No data is shared without your explicit consent.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Reports section -->
+    <div class="t-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="t-card-title" style="margin-bottom:0">Reports &amp; Exports</div>
+        <button class="btn btn-primary btn-sm" id="downloadReportBtn">📥 Download Latest</button>
+        <button class="btn btn-ghost btn-sm" id="generateReportBtn" style="margin-left:8px">🔄 Generate Now</button>
+      </div>
+
+      <div id="reportsContainer">
+        <div style="color:var(--text3);font-size:0.88rem;padding:16px 0">Loading your reports...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Send message modal -->
+<div class="modal-overlay" id="therapistMessageModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">💬 Send a note to your therapist</div>
+      <button class="modal-close" onclick="closeModal('therapistMessageModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message</label>
+      <textarea class="form-input" id="therapistNote" rows="4" placeholder="e.g. I wanted to share how I've been feeling this week..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="flex:1" onclick="sendNote()">Send Note 📨</button>
+      <button class="btn btn-ghost" onclick="closeModal('therapistMessageModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+<script>
+  function sendTherapistMessage() { openModal('therapistMessageModal'); }
+  function sendNote() {
+    const note = document.getElementById('therapistNote').value.trim();
+    if (!note) return;
+    showToast('Note sent to your therapist 📨', 'success');
+    closeModal('therapistMessageModal');
+    document.getElementById('therapistNote').value = '';
+  }
+  function confirmDisconnect() {
+    if (confirm('Are you sure you want to disconnect your therapist? They will no longer receive your reports.')) {
+      document.getElementById('therapistConnected').style.display = 'none';
+      document.getElementById('connectSection').style.display = 'block';
+      showToast('Therapist disconnected', 'info');
+    }
+  }
+  // ── Dynamic Reports ──────────────────────────────────────────
+  async function loadReports() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) return;
+    const userId = session.user.id;
+
+    const now   = new Date();
+    const month = now.getMonth();
+    const year  = now.getFullYear();
+
+    // Fetch last 60 days of data
+    const since = new Date(); since.setDate(since.getDate() - 60);
+    const [{ data: sessions }, { data: moods }] = await Promise.all([
+      supabaseClient.from('chat_sessions').select('*').eq('user_id', userId).gte('created_at', since.toISOString()).order('created_at', { ascending: false }),
+      supabaseClient.from('mood_entries').select('*').eq('user_id', userId).gte('created_at', since.toISOString()).order('created_at', { ascending: false }),
+    ]);
+
+    const container = document.getElementById('reportsContainer');
+    if (!container) return;
+
+    // Helper: sessions in a date range
+    function sessionsIn(from, to) {
+      return (sessions || []).filter(s => {
+        const d = new Date(s.created_at);
+        return d >= from && d <= to;
+      });
+    }
+    function moodsIn(from, to) {
+      return (moods || []).filter(m => {
+        const d = new Date(m.created_at);
+        return d >= from && d <= to;
+      });
+    }
+    function avgMood(arr) {
+      if (!arr.length) return null;
+      return (arr.reduce((s, m) => s + m.mood_score, 0) / arr.length).toFixed(1);
+    }
+
+    // Build report list
+    const reports = [];
+
+    // Current month report
+    const monthStart = new Date(year, month, 1);
+    const monthSess  = sessionsIn(monthStart, now);
+    const monthMoods = moodsIn(monthStart, now);
+    const monthName  = now.toLocaleString('default', { month: 'long' });
+    reports.push({
+      icon: '📄',
+      name: `${monthName} ${year} — Monthly Summary`,
+      meta: `Generated ${now.toLocaleDateString('en-US', { month:'short', day:'numeric' })} · ${monthSess.length} sessions · ${avgMood(monthMoods) ? 'Avg mood ' + avgMood(monthMoods) + '/5' : 'No mood data'}`,
+      data: { sessions: monthSess, moods: monthMoods, label: `${monthName} ${year}` },
+      action: 'Download',
+    });
+
+    // Last week report
+    const weekStart = new Date(); weekStart.setDate(now.getDate() - 7);
+    const weekSess  = sessionsIn(weekStart, now);
+    const weekMoods = moodsIn(weekStart, now);
+    reports.push({
+      icon: '📊',
+      name: `Week of ${weekStart.toLocaleDateString('en-US', { month:'short', day:'numeric' })} — Weekly Report`,
+      meta: `Generated today · ${weekSess.length} sessions · ${avgMood(weekMoods) ? 'Avg mood ' + avgMood(weekMoods) + '/5' : 'No mood data'}`,
+      data: { sessions: weekSess, moods: weekMoods, label: 'Weekly' },
+      action: 'Download',
+    });
+
+    // Previous month
+    const prevMonthStart = new Date(year, month - 1, 1);
+    const prevMonthEnd   = new Date(year, month, 0);
+    const prevSess  = sessionsIn(prevMonthStart, prevMonthEnd);
+    const prevMoods = moodsIn(prevMonthStart, prevMonthEnd);
+    const prevName  = prevMonthStart.toLocaleString('default', { month: 'long' });
+    reports.push({
+      icon: '📄',
+      name: `${prevName} ${year} — Monthly Summary`,
+      meta: `Generated ${prevMonthEnd.toLocaleDateString('en-US', { month:'short', day:'numeric' })} · ${prevSess.length} sessions · ${avgMood(prevMoods) ? 'Avg mood ' + avgMood(prevMoods) + '/5' : 'No mood data'}`,
+      data: { sessions: prevSess, moods: prevMoods, label: `${prevName} ${year}` },
+      action: 'Download',
+    });
+
+    if (!reports.some(r => r.data.sessions.length || r.data.moods.length)) {
+      container.innerHTML = '<div style="color:var(--text3);font-size:0.88rem;padding:16px 0;text-align:center">No session or mood data yet — start chatting to generate reports!</div>';
+      return;
+    }
+
+    container.innerHTML = reports.map((r, i) => `
+      <div class="report-item">
+        <div class="report-icon">${r.icon}</div>
+        <div class="report-info">
+          <div class="report-name">${r.name}</div>
+          <div class="report-meta">${r.meta}</div>
+        </div>
+        <button class="report-action" onclick="downloadDynamicReport(${i})">${r.action}</button>
+      </div>`).join('');
+
+    // Store for download
+    window._reportData = reports;
+
+    // Wire Download Latest
+    document.getElementById('downloadReportBtn').onclick = () => downloadDynamicReport(0);
+    document.getElementById('generateReportBtn').onclick = () => { loadReports(); showToast('Reports refreshed!', 'success'); };
+  }
+
+  function downloadDynamicReport(idx) {
+    const r = window._reportData?.[idx];
+    if (!r) return;
+    const { sessions, moods, label } = r.data;
+    const avgScore = moods.length ? (moods.reduce((s, m) => s + m.mood_score, 0) / moods.length).toFixed(1) : 'N/A';
+    const moodLabels = moods.map(m => `  ${new Date(m.created_at).toLocaleDateString()} — ${m.mood_label || '?'} (${m.mood_score}/5)`).join('\n') || '  No entries';
+    const sessionList = sessions.map(s => `  ${new Date(s.created_at).toLocaleDateString()} — ${s.title || 'Session'}`).join('\n') || '  No sessions';
+
+    const text = `SERENE WELLNESS REPORT — ${label.toUpperCase()}
+Generated: ${new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUMMARY
+  Total Sessions   : ${sessions.length}
+  Average Mood     : ${avgScore}/5
+  Mood Entries     : ${moods.length}
+
+MOOD LOG
+${moodLabels}
+
+SESSION HISTORY
+${sessionList}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This report was generated by Serene AI for therapeutic reference.
+Your data is private and end-to-end protected.`;
+
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })),
+      download: `serene-report-${label.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.txt`,
+    });
+    a.click();
+    showToast('Report downloaded! 📥', 'success');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    ['shareToggle','shareMoodToggle','shareAlertToggle','shareRawToggle'].forEach(id => {
+      document.getElementById(id)?.addEventListener('change', function() {
+        showToast(this.checked ? 'Sharing enabled' : 'Sharing disabled', 'info');
+      });
+    });
+    loadReports();
+  });
+</script>
+</body>
+</html>

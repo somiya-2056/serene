@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Serene</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-page="dashboard">
+
+<nav class="navbar">
+  <a class="navbar-brand" href="index.html">Serene</a>
+  <div class="navbar-nav">
+    <a href="chat.html"  class="nav-link">Chat</a>
+    <a href="forum.html" class="nav-link">Community</a>
+    <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
+    <div class="user-avatar" id="navAvatar"></div>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <div class="dash-sidebar">
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Main</div>
+      <div class="dash-nav-item active"><span class="dash-nav-icon">📊</span>Overview</div>
+      <a href="chat.html"     class="dash-nav-item"><span class="dash-nav-icon">💬</span>Chat</a>
+      <!-- BUG FIX #1: button ko proper type="button" diya, aur id sahi rakha -->
+      <button type="button" class="dash-nav-item" id="moodLogBtn" style="width:100%;text-align:left;background:none;border:none;color:var(--text2);font-size:0.88rem;font-weight:500;cursor:pointer;">
+        <span class="dash-nav-icon">😊</span>Mood Log
+      </button>
+      <a href="progress.html" class="dash-nav-item"><span class="dash-nav-icon">📈</span>Progress</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Connect</div>
+      <a href="forum.html"     class="dash-nav-item">
+        <span class="dash-nav-icon">🌐</span>Community<span class="dash-badge" id="forumBadge" style="display:none">3</span>
+      </a>
+      <a href="therapist.html" class="dash-nav-item"><span class="dash-nav-icon">🩺</span>My Therapist</a>
+      <a href="therapist.html#reports" class="dash-nav-item"><span class="dash-nav-icon">📋</span>Reports</a>
+    </div>
+    <div class="dash-nav-section">
+      <div class="dash-nav-label">Account</div>
+      <div class="dash-nav-item"><span class="dash-nav-icon">⚙️</span>Settings</div>
+      <a href="index.html" class="dash-nav-item"><span class="dash-nav-icon">🏠</span>Home</a>
+      <button type="button" class="dash-nav-item" id="logoutBtn" style="width:100%;text-align:left;background:none;border:none;color:var(--text2);font-size:0.88rem;font-weight:500;cursor:pointer;">
+        <span class="dash-nav-icon">🚪</span>Sign Out
+      </button>
+    </div>
+  </div>
+
+  <div class="dash-content">
+    <div class="dash-header">
+      <div class="dash-greeting" id="dashGreeting">Good Day!</div>
+      <div class="dash-date"     id="dashDate"></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-card-label">Chat Sessions</div>
+        <div class="stat-card-val" id="statSessions">—</div>
+        <div class="stat-card-change up" id="statSessionsChange">Loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Avg Mood Score</div>
+        <div class="stat-card-val" id="statMood">—</div>
+        <div class="stat-card-change up" id="statMoodChange">Last 30 days</div>
+      </div>
+      <div class="stat-card">
+        <!-- BUG FIX #2: streak label order sahi kiya — val pehle, label baad mein -->
+        <div class="stat-card-label">Day Streak 🔥</div>
+        <div class="stat-card-val" id="statStreak">—</div>
+        <div class="stat-card-change up" id="statStreakChange">Keep it up!</div>
+      </div>
+      <div class="stat-card">
+        <!-- BUG FIX #3: statCheckins id add ki — script.js mein ye use hoti hai -->
+        <div class="stat-card-label">Mood Check-ins</div>
+        <div class="stat-card-val" id="statCheckins">—</div>
+        <div class="stat-card-change up">This month</div>
+      </div>
+    </div>
+
+    <div class="heatmap-section">
+      <div class="section-head">
+        <h3>Mood Heatmap · Loading...</h3>
+        <select style="background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:var(--radius-sm);font-size:0.82rem;">
+          <option>This Month</option><option>Last Month</option><option>3 Months</option>
+        </select>
+      </div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+      <div class="heatmap-legend">
+        <span>Low</span>
+        <div class="legend-swatch" style="background:var(--danger);opacity:.6"></div>
+        <div class="legend-swatch" style="background:var(--accent2);opacity:.6"></div>
+        <div class="legend-swatch" style="background:var(--accent);opacity:.5"></div>
+        <div class="legend-swatch" style="background:var(--accent3);opacity:.6"></div>
+        <div class="legend-swatch" style="background:var(--accent3)"></div>
+        <span>High</span>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <h4>Mood Trend · Last 7 Days</h4>
+        <div class="chart-placeholder" id="moodChart"></div>
+      </div>
+      <div class="chart-card">
+        <h4>Session Frequency</h4>
+        <div class="chart-placeholder" id="sessionChart"></div>
+      </div>
+    </div>
+
+    <!-- BUG FIX #4: Hardcoded sessions ki jagah dynamic list — script.js buildRecentSessions() use karta hai -->
+    <div class="card">
+      <div class="section-head" style="margin-bottom:0">
+        <h3>Recent Sessions</h3>
+        <a href="chat.html" class="btn btn-ghost btn-sm">New Chat +</a>
+      </div>
+      <div style="margin-top:16px" id="recentSessionsList">
+        <!-- script.js buildRecentSessions() se populate hoga -->
+        <div style="color:var(--text3);font-size:0.88rem;padding:16px 0">Loading sessions...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mood Log Modal -->
+<div class="modal-overlay" id="moodLogModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">😊 Log Your Mood</div>
+      <button type="button" class="modal-close" id="moodLogModalClose">✕</button>
+    </div>
+    <p style="color:var(--text2);margin-bottom:20px;font-size:0.92rem">How are you feeling right now? This will be saved to your mood history.</p>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:24px" id="moodLogOptions">
+      <button type="button" class="mood-log-opt" data-mood="Great" data-score="5" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:var(--bg2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;color:var(--text)">
+        <span style="font-size:1.8rem">😊</span><span style="font-size:0.72rem;font-weight:600">Great</span>
+      </button>
+      <button type="button" class="mood-log-opt" data-mood="Good" data-score="4" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:var(--bg2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;color:var(--text)">
+        <span style="font-size:1.8rem">🙂</span><span style="font-size:0.72rem;font-weight:600">Good</span>
+      </button>
+      <button type="button" class="mood-log-opt" data-mood="Okay" data-score="3" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:var(--bg2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;color:var(--text)">
+        <span style="font-size:1.8rem">😐</span><span style="font-size:0.72rem;font-weight:600">Okay</span>
+      </button>
+      <button type="button" class="mood-log-opt" data-mood="Low" data-score="2" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:var(--bg2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;color:var(--text)">
+        <span style="font-size:1.8rem">😔</span><span style="font-size:0.72rem;font-weight:600">Low</span>
+      </button>
+      <button type="button" class="mood-log-opt" data-mood="Bad" data-score="1" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:12px;background:var(--bg2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;color:var(--text)">
+        <span style="font-size:1.8rem">😞</span><span style="font-size:0.72rem;font-weight:600">Bad</span>
+      </button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Add a note (optional)</label>
+      <textarea class="form-input" id="moodLogNote" rows="3" placeholder="What's influencing your mood today?"></textarea>
+    </div>
+    <button type="button" class="btn btn-primary btn-full" id="moodLogSaveBtn" disabled>Save Mood Entry</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
