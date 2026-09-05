@@ -239,8 +239,6 @@ let _isSending        = false;
 let _ttsEnabled       = false;
 let _currentSessionId = null;
 let currentSessionId  = null;
-const GROQ_API_KEY = window.__SERENE_CONFIG?.GROQ_API_KEY || '';
-
 const THERAPIST_SYSTEM = `You are Serene — a warm, real, caring friend who also happens to be trained in CBT and person-centred therapy. You're not a bot, you're a companion.
 
 HOW YOU TALK:
@@ -263,43 +261,31 @@ WHAT YOU DO:
 
 You are Serene. You genuinely care.`;
 
-/* ═══════════════ GROQ API CALL ═══════════════ */
+/* ═══════════════ CHAT API (via backend — key stays server-side) ═══════════════ */
 async function callChatAPI(message) {
-  const messages = [];
-  messages.push({ role: 'user', content: THERAPIST_SYSTEM });
-  messages.push({ role: 'assistant', content: 'Understood. I am Serene.' });
+  const history = _messages.slice(-16).map(m => ({
+    role: m.role === 'ai' ? 'ai' : 'user',
+    text: m.text
+  }));
 
-  _messages.slice(-16).forEach(m => {
-    messages.push({
-      role: m.role === 'ai' ? 'assistant' : 'user',
-      content: m.text
-    });
-  });
-
-  messages.push({ role: 'user', content: message });
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'openai/gpt-oss-120b',
-      messages: messages,
-      max_tokens: 300,
-      temperature: 0.85
+      message: message,
+      history: history,
+      system: THERAPIST_SYSTEM
     })
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Groq error ${res.status}`);
+    throw new Error(`Backend error ${res.status}`);
   }
 
   const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content;
-  if (!reply) throw new Error('Empty response from Groq');
+  if (data.error) throw new Error(data.error);
+  const reply = data.reply;
+  if (!reply) throw new Error('Empty response from server');
   return reply.trim();
 }
 
