@@ -8,7 +8,7 @@ if (!window.supabase) {
 const { createClient } = window.supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const API_BASE            = 'http://localhost:8000';
+const API_BASE             = window.__SERENE_CONFIG?.API_BASE || 'http://localhost:8000';
 const SENTIMENT_THRESHOLD = -0.75;
 
 /* ═══════════════ THEME ═══════════════ */
@@ -311,7 +311,7 @@ async function sendMessage() {
   try {
     let sentimentScore = 0.5;
     try {
-      const sentimentRes = await fetch('http://127.0.0.1:8000/sentiment', {
+      const sentimentRes = await fetch(`${API_BASE}/sentiment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
