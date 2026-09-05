@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from transformers import pipeline
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from dotenv import load_dotenv
 import os
 import sys
+import json
 from groq import Groq
 from pathlib import Path
 
@@ -26,7 +26,8 @@ if env_path.exists():
     except Exception as e:
         print(f"⚠️ Manual read failed: {e}")
 
-# If manual read failed, try standard dotenv
+# If manual read failed, try standard dotenv (also covers hosting platforms
+# that inject env vars directly, e.g. Render/HF Spaces, with no .env file)
 if not key:
     load_dotenv(dotenv_path=env_path)
     key = os.getenv("GROQ_API_KEY")
@@ -51,22 +52,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global model variable
-sentiment_model = None
-
-@app.on_event("startup")
-def load_model():
-    global sentiment_model
-    print("⏳ Loading Sentiment Model (this takes a moment)...")
-    try:
-        sentiment_model = pipeline(
-            "sentiment-analysis", 
-            model="distilbert-base-uncased-finetuned-sst-2-english"
-        )
-        print("✅ Sentiment Model Ready.")
-    except Exception as e:
-        print(f"❌ Model Load Error: {e}")
-
 # --- 📝 STEP 3: MODELS & ENDPOINTS ---
 class TextRequest(BaseModel):
     text: str
@@ -82,13 +67,27 @@ def health_check():
 
 @app.post("/sentiment")
 def analyze_sentiment(request: TextRequest):
+    """Sentiment via Groq (no local model — keeps the backend lightweight)."""
     try:
-        if not sentiment_model:
-            return {"error": "Model not loaded yet"}
-        res = sentiment_model(request.text)[0]
-        # Normalize: Negative label = negative score
-        score = res["score"] if res["label"] == "POSITIVE" else -res["score"]
-        return {"label": res["label"], "score": score, "confidence": res["score"]}
+        prompt = (
+            "Classify the sentiment of the following message. "
+            "Reply with ONLY a JSON object, no other text, in this exact form: "
+            '{"label": "POSITIVE" or "NEGATIVE", "confidence": a number between 0 and 1}.\n\n'
+            f"Message: {request.text}"
+        )
+        response = groq_client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+        raw = response.choices[0].message.content.strip()
+        # Strip accidental code fences if the model adds them
+        raw = raw.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(raw)
+        label = parsed.get("label", "NEUTRAL")
+        confidence = float(parsed.get("confidence", 0.5))
+        score = confidence if label == "POSITIVE" else -confidence
+        return {"label": label, "score": score, "confidence": confidence}
     except Exception as e:
         return {"error": str(e)}
 
